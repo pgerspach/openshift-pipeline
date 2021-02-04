@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1beta1 
+kind: Task 
+metadata:
+  name: git-clone
+spec: 
+  params:
+  - name: source-repository
+    default: ""
+  - name: revision
+    default: main
+  steps:
+  - workingDir: /
+    command:
+    - /bin/sh
+    - -c
+    args:
+    - |-
+      echo Downloading git repo $(inputs.params.source-repository)
+      echo -----------------------------------
+      cp /.ssh/ssh-privatekey /source/
+      chmod 600 /source/ssh-privatekey
+      echo 'ssh -i /source/ssh-privatekey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $*' > /source/ssh
+      chmod +x /source/ssh
+      cd /source
+      rm -rf /source/repo
+      GIT_TRACE=1 GIT_SSH='/source/ssh' git clone $(inputs.params.source-repository) repo
+      rm -f ssh ssh-privatekey
+    image: alpine/git
+    name: clone
+  workspaces:
+  - name: source
+    mountPath: /source
+  - name: source-ssh
+    mountPath: /.ssh

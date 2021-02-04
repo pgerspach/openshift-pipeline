@@ -1,0 +1,11 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: github-listener-interceptor-{{ include "chart.appName" . }}
+spec:
+  path: /
+  to:
+    kind: Service
+    name: el-github-listener-interceptor-{{ include "chart.appName" . }}
+  port:
+    targetPort: http-listener

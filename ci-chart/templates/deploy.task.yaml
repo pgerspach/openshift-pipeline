@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1 
+kind: Task 
+metadata:
+  name: deploy
+spec: 
+  steps:
+  - workingDir: /
+    command:
+    - /bin/sh
+    - -c
+    args:
+    - |-
+      cd /source/repo
+      cat <<EOF | oc apply -f -
+      `helm template demo-app-1-release-1 chart`
+      EOF
+    image: ibmgaragecloud/ibmcloud-dev:1.2.2
+    name: deploy
+  workspaces:
+  - name: source
+    mountPath: /source

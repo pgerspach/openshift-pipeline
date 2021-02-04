@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1beta1 
+kind: Task 
+metadata:
+  name: build-push
+spec:
+  volumes:
+  - name: varlibcontainers
+    emptyDir: {}
+  params:
+  - name: image-repository
+    default: ""
+  steps:
+  - workingDir: /
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    command:
+    - /bin/sh
+    - -c
+    args:
+    - |-
+      cd /source
+      echo Building image... $(inputs.params.image-repository)
+      buildah --layers --storage-driver=overlay bud --format=docker --tls-verify=false -f Dockerfile -t $(inputs.params.image-repository):1.0.0 ./repo
+      buildah --storage-driver=overlay push --tls-verify=false --digestfile ./image-digest $(inputs.params.image-repository):1.0.0
+    image: quay.io/buildah/stable:v1.15.0
+    name: build
+    securityContext:
+      privileged: true
+  workspaces:
+  - name: source
+    mountPath: /source

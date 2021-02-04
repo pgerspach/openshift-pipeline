@@ -1,0 +1,63 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: github-listener-interceptor-{{ include "chart.appName" . }}
+spec:
+  serviceAccountName: triggers-sa
+  triggers:
+    - name: github-listener-{{ include "chart.appName" . }}
+      interceptors:
+        - github:
+            secretRef:
+              secretName: github-secret-{{ include "chart.appName" . }}
+              secretKey: secretToken
+            eventTypes:
+              - pull_request
+              - push
+      bindings:
+        - ref: github-pr-binding-{{ include "chart.appName" . }}
+      template:
+        name: github-template-{{ include "chart.appName" . }}
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: github-pr-binding-{{ include "chart.appName" . }}
+spec:
+  params:
+    # - name: gitrevision
+    #   value: $(body.pull_request.head.sha)
+    - name: gitrepositoryurl
+      value: $(body.repository.clone_url)
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: github-template-{{ include "chart.appName" . }}
+spec:
+  params:
+    # - name: gitrevision
+    - name: gitrepositoryurl
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1alpha1
+      kind: PipelineRun
+      metadata:
+        generateName: "{{ include "chart.appName" . }}-"
+      spec:
+        params:
+          - name: source-repository
+            value: {{ .Values.sourceRepository }}
+          - name: revision
+            value: main
+          - name: image-repository
+            value: {{ .Values.imageRepository }}
+        pipelineRef:
+          name: build-push-deploy
+        workspaces:
+          - name: source
+            persistentVolumeClaim:
+              claimName: pipeline-source
+          - name: source-ssh
+            secret:
+              secretName: git-clone-{{ include "chart.appName" . }}

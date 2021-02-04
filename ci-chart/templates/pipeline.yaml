@@ -1,0 +1,54 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-push-deploy
+spec:
+  workspaces:
+  - name: source  
+  - name: source-ssh
+  params:
+  - name: source-repository
+    type: string
+    description: Git repository
+    default: ""
+  - name: revision
+    type: string
+    description: Git branch
+    default: "main"
+  - name: image-repository
+    type: string
+    description: Image name and tag
+    default: ""
+  tasks:
+  - name: git-clone
+    taskRef:
+      name: git-clone
+    params:
+    - name: source-repository
+      value: "$(params.source-repository)"
+    - name: revision
+      value: "$(params.revision)"
+    workspaces:
+    - name: source
+      workspace: source
+    - name: source-ssh
+      workspace: source-ssh
+  - name: build-push
+    taskRef:
+      name: build-push
+    params:
+    - name: image-repository
+      value: "$(params.image-repository)"
+    workspaces:
+    - name: source
+      workspace: source
+    runAfter:
+    - git-clone
+  # - name: deploy
+  #   taskRef:
+  #     name: deploy
+  #   workspaces:
+  #   - name: source
+  #     workspace: source
+  #   runAfter:
+  #   - build-push
